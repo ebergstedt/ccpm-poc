@@ -128,3 +128,39 @@ export interface StreamMessage {
   id: string;
   task: Task;
 }
+
+/**
+ * Worker heartbeat received via gRPC stream
+ */
+export interface WorkerHeartbeat {
+  workerId: string;
+  cpuUsage: number; // 0-1
+  memoryUsage: number; // 0-1
+  queueDepth: number;
+  timestampMs: number;
+}
+
+/**
+ * Worker health status based on heartbeat data
+ */
+export type WorkerHealthStatus = 'healthy' | 'degraded' | 'unhealthy' | 'removed';
+
+/**
+ * Extended worker state with capacity tracking
+ */
+export interface WorkerCapacityState {
+  queueDepth: number;
+  estimatedAvailableAt: Date | null;
+  healthStatus: WorkerHealthStatus;
+  avgTaskDurationMs: number;
+}
+
+/**
+ * Event types emitted by the heartbeat subscriber
+ */
+export type WorkerStateEvent =
+  | { type: 'worker_healthy'; workerId: string }
+  | { type: 'worker_degraded'; workerId: string; load: number }
+  | { type: 'worker_unhealthy'; workerId: string; lastHeartbeat: Date }
+  | { type: 'worker_removed'; workerId: string }
+  | { type: 'worker_load_changed'; workerId: string; previousLoad: number; currentLoad: number };
