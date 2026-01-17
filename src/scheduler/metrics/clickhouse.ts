@@ -286,8 +286,9 @@ export class ClickHouseWriter {
       format: 'JSONEachRow',
     });
 
-    const rows = await result.json<ClickHouseDecisionRow[]>();
-    return rows.map(rowToRecord);
+    const rows = await result.json<ClickHouseDecisionRow>();
+    const data = Array.isArray(rows) ? rows : [rows];
+    return data.map(rowToRecord);
   }
 
   /**
@@ -313,8 +314,9 @@ export class ClickHouseWriter {
       format: 'JSONEachRow',
     });
 
-    const rows = await result.json<ClickHouseDecisionRow[]>();
-    return rows.map(rowToRecord);
+    const rows = await result.json<ClickHouseDecisionRow>();
+    const data = Array.isArray(rows) ? rows : [rows];
+    return data.map(rowToRecord);
   }
 
   /**
@@ -346,8 +348,9 @@ export class ClickHouseWriter {
       format: 'JSONEachRow',
     });
 
-    const rows = await result.json<ClickHouseDecisionRow[]>();
-    return rows.map(rowToRecord);
+    const rows = await result.json<ClickHouseDecisionRow>();
+    const data = Array.isArray(rows) ? rows : [rows];
+    return data.map(rowToRecord);
   }
 
   /**
@@ -377,14 +380,15 @@ export class ClickHouseWriter {
       format: 'JSONEachRow',
     });
 
-    const rows = await result.json<ClickHouseFallbackStatsRow[]>();
+    const rows = await result.json<ClickHouseFallbackStatsRow>();
+    const data = Array.isArray(rows) ? rows : [rows];
 
-    if (rows.length === 0) {
+    if (data.length === 0) {
       return { total: 0, fallback: 0, ratio: 0 };
     }
 
-    const total = parseInt(rows[0].total, 10);
-    const fallback = parseInt(rows[0].fallback_count, 10);
+    const total = parseInt(data[0].total, 10);
+    const fallback = parseInt(data[0].fallback_count, 10);
 
     return {
       total,
