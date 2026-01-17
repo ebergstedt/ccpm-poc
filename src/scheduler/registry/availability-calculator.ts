@@ -53,17 +53,19 @@ export function calculateEstimatedAvailableAt(
 export function determineHealthStatus(
   lastHeartbeatMs: number,
   currentLoad: number,
-  now: Date = new Date()
+  now: Date = new Date(),
+  unhealthyTimeoutMs: number = HEALTH_THRESHOLDS.UNHEALTHY_TIMEOUT_MS,
+  removedTimeoutMs: number = HEALTH_THRESHOLDS.REMOVED_TIMEOUT_MS
 ): WorkerHealthStatus {
   const timeSinceHeartbeat = now.getTime() - lastHeartbeatMs;
 
   // Removed: No heartbeat for 5 minutes
-  if (timeSinceHeartbeat >= HEALTH_THRESHOLDS.REMOVED_TIMEOUT_MS) {
+  if (timeSinceHeartbeat >= removedTimeoutMs) {
     return 'removed';
   }
 
   // Unhealthy: No heartbeat for 30 seconds
-  if (timeSinceHeartbeat >= HEALTH_THRESHOLDS.UNHEALTHY_TIMEOUT_MS) {
+  if (timeSinceHeartbeat >= unhealthyTimeoutMs) {
     return 'unhealthy';
   }
 
@@ -78,7 +80,7 @@ export function determineHealthStatus(
 
 /**
  * Check if load change is significant enough to emit an event
- * Returns true if load changed by more than 10%
+ * Returns true if load changed by more than threshold
  */
 export function isSignificantLoadChange(
   previousLoad: number,
@@ -89,13 +91,33 @@ export function isSignificantLoadChange(
 }
 
 /**
+ * Configuration for AvailabilityCalculator
+ */
+export interface AvailabilityCalculatorConfig {
+  avgTaskDurationMs?: number;
+  unhealthyTimeoutMs?: number;
+  removedTimeoutMs?: number;
+}
+
+/**
  * AvailabilityCalculator class for processing heartbeats
  */
 export class AvailabilityCalculator {
   private avgTaskDurationMs: number;
+  private unhealthyTimeoutMs: number;
+  private removedTimeoutMs: number;
 
-  constructor(avgTaskDurationMs: number = DEFAULT_AVG_TASK_DURATION_MS) {
-    this.avgTaskDurationMs = avgTaskDurationMs;
+  constructor(config: AvailabilityCalculatorConfig | number = {}) {
+    // Support legacy constructor with just avgTaskDurationMs
+    if (typeof config === 'number') {
+      this.avgTaskDurationMs = config;
+      this.unhealthyTimeoutMs = HEALTH_THRESHOLDS.UNHEALTHY_TIMEOUT_MS;
+      this.removedTimeoutMs = HEALTH_THRESHOLDS.REMOVED_TIMEOUT_MS;
+    } else {
+      this.avgTaskDurationMs = config.avgTaskDurationMs ?? DEFAULT_AVG_TASK_DURATION_MS;
+      this.unhealthyTimeoutMs = config.unhealthyTimeoutMs ?? HEALTH_THRESHOLDS.UNHEALTHY_TIMEOUT_MS;
+      this.removedTimeoutMs = config.removedTimeoutMs ?? HEALTH_THRESHOLDS.REMOVED_TIMEOUT_MS;
+    }
   }
 
   /**
@@ -103,7 +125,13 @@ export class AvailabilityCalculator {
    */
   processHeartbeat(heartbeat: WorkerHeartbeat): WorkerCapacityState {
     const currentLoad = calculateCurrentLoad(heartbeat.cpuUsage, heartbeat.memoryUsage);
-    const healthStatus = determineHealthStatus(heartbeat.timestampMs, currentLoad);
+    const healthStatus = determineHealthStatus(
+      heartbeat.timestampMs,
+      currentLoad,
+      new Date(),
+      this.unhealthyTimeoutMs,
+      this.removedTimeoutMs
+    );
     const estimatedAvailableAt = calculateEstimatedAvailableAt(
       heartbeat.queueDepth,
       this.avgTaskDurationMs
@@ -122,7 +150,7 @@ export class AvailabilityCalculator {
    */
   shouldMarkUnhealthy(lastHeartbeatMs: number, now: Date = new Date()): boolean {
     const timeSinceHeartbeat = now.getTime() - lastHeartbeatMs;
-    return timeSinceHeartbeat >= HEALTH_THRESHOLDS.UNHEALTHY_TIMEOUT_MS;
+    return timeSinceHeartbeat >= this.unhealthyTimeoutMs;
   }
 
   /**
@@ -130,7 +158,7 @@ export class AvailabilityCalculator {
    */
   shouldRemoveWorker(lastHeartbeatMs: number, now: Date = new Date()): boolean {
     const timeSinceHeartbeat = now.getTime() - lastHeartbeatMs;
-    return timeSinceHeartbeat >= HEALTH_THRESHOLDS.REMOVED_TIMEOUT_MS;
+    return timeSinceHeartbeat >= this.removedTimeoutMs;
   }
 
   /**

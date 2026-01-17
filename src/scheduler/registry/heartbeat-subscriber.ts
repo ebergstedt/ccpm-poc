@@ -72,7 +72,11 @@ export class HeartbeatSubscriber extends EventEmitter {
     super();
     this.registry = registry;
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.calculator = new AvailabilityCalculator(this.config.avgTaskDurationMs);
+    this.calculator = new AvailabilityCalculator({
+      avgTaskDurationMs: this.config.avgTaskDurationMs,
+      unhealthyTimeoutMs: this.config.unhealthyTimeoutMs,
+      removedTimeoutMs: this.config.removedTimeoutMs,
+    });
     this.workerCapacity = new Map();
   }
 
