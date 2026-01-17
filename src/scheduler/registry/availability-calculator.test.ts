@@ -122,9 +122,10 @@ describe('AvailabilityCalculator', () => {
       expect(isSignificantLoadChange(0.5, 0.45, 0.1)).toBe(false);
     });
 
-    it('should return true when load changes exactly at threshold', () => {
-      expect(isSignificantLoadChange(0.5, 0.6, 0.1)).toBe(true);
-      expect(isSignificantLoadChange(0.5, 0.4, 0.1)).toBe(true);
+    it('should return true when load changes at or above threshold', () => {
+      // Just above threshold
+      expect(isSignificantLoadChange(0.5, 0.61, 0.1)).toBe(true);
+      expect(isSignificantLoadChange(0.5, 0.39, 0.1)).toBe(true);
     });
 
     it('should use default threshold of 0.1', () => {

@@ -68,6 +68,46 @@ export interface SchedulerDecisionRecord {
 }
 
 /**
+ * Raw row type from ClickHouse queries
+ */
+interface ClickHouseDecisionRow {
+  timestamp: string;
+  task_id: string;
+  task_type: string;
+  worker_id: string;
+  predicted_duration_ms: number;
+  predicted_wait_ms: number;
+  score: number;
+  reasoning: string;
+  fallback_used: number;
+}
+
+/**
+ * Raw row type for fallback stats query
+ */
+interface ClickHouseFallbackStatsRow {
+  total: string;
+  fallback_count: string;
+}
+
+/**
+ * Convert a ClickHouse row to a SchedulerDecisionRecord
+ */
+function rowToRecord(row: ClickHouseDecisionRow): SchedulerDecisionRecord {
+  return {
+    timestamp: new Date(row.timestamp),
+    taskId: row.task_id,
+    taskType: row.task_type,
+    workerId: row.worker_id,
+    predictedDurationMs: row.predicted_duration_ms,
+    predictedWaitMs: row.predicted_wait_ms,
+    score: row.score,
+    reasoning: row.reasoning,
+    fallbackUsed: row.fallback_used === 1,
+  };
+}
+
+/**
  * ClickHouse writer for scheduler decisions
  */
 export class ClickHouseWriter {
@@ -246,29 +286,8 @@ export class ClickHouseWriter {
       format: 'JSONEachRow',
     });
 
-    const rows = await result.json<{
-      timestamp: string;
-      task_id: string;
-      task_type: string;
-      worker_id: string;
-      predicted_duration_ms: number;
-      predicted_wait_ms: number;
-      score: number;
-      reasoning: string;
-      fallback_used: number;
-    }[]>();
-
-    return rows.map((row) => ({
-      timestamp: new Date(row.timestamp),
-      taskId: row.task_id,
-      taskType: row.task_type,
-      workerId: row.worker_id,
-      predictedDurationMs: row.predicted_duration_ms,
-      predictedWaitMs: row.predicted_wait_ms,
-      score: row.score,
-      reasoning: row.reasoning,
-      fallbackUsed: row.fallback_used === 1,
-    }));
+    const rows = await result.json<ClickHouseDecisionRow[]>();
+    return rows.map(rowToRecord);
   }
 
   /**
@@ -294,29 +313,8 @@ export class ClickHouseWriter {
       format: 'JSONEachRow',
     });
 
-    const rows = await result.json<{
-      timestamp: string;
-      task_id: string;
-      task_type: string;
-      worker_id: string;
-      predicted_duration_ms: number;
-      predicted_wait_ms: number;
-      score: number;
-      reasoning: string;
-      fallback_used: number;
-    }[]>();
-
-    return rows.map((row) => ({
-      timestamp: new Date(row.timestamp),
-      taskId: row.task_id,
-      taskType: row.task_type,
-      workerId: row.worker_id,
-      predictedDurationMs: row.predicted_duration_ms,
-      predictedWaitMs: row.predicted_wait_ms,
-      score: row.score,
-      reasoning: row.reasoning,
-      fallbackUsed: row.fallback_used === 1,
-    }));
+    const rows = await result.json<ClickHouseDecisionRow[]>();
+    return rows.map(rowToRecord);
   }
 
   /**
@@ -348,29 +346,8 @@ export class ClickHouseWriter {
       format: 'JSONEachRow',
     });
 
-    const rows = await result.json<{
-      timestamp: string;
-      task_id: string;
-      task_type: string;
-      worker_id: string;
-      predicted_duration_ms: number;
-      predicted_wait_ms: number;
-      score: number;
-      reasoning: string;
-      fallback_used: number;
-    }[]>();
-
-    return rows.map((row) => ({
-      timestamp: new Date(row.timestamp),
-      taskId: row.task_id,
-      taskType: row.task_type,
-      workerId: row.worker_id,
-      predictedDurationMs: row.predicted_duration_ms,
-      predictedWaitMs: row.predicted_wait_ms,
-      score: row.score,
-      reasoning: row.reasoning,
-      fallbackUsed: row.fallback_used === 1,
-    }));
+    const rows = await result.json<ClickHouseDecisionRow[]>();
+    return rows.map(rowToRecord);
   }
 
   /**
@@ -400,7 +377,7 @@ export class ClickHouseWriter {
       format: 'JSONEachRow',
     });
 
-    const rows = await result.json<{ total: string; fallback_count: string }[]>();
+    const rows = await result.json<ClickHouseFallbackStatsRow[]>();
 
     if (rows.length === 0) {
       return { total: 0, fallback: 0, ratio: 0 };

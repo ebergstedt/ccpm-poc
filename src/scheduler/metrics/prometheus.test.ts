@@ -6,7 +6,6 @@ import {
   SchedulerMetrics,
   getMetrics,
   resetGlobalMetrics,
-  DecisionStatus,
 } from './prometheus';
 
 describe('SchedulerMetrics', () => {
