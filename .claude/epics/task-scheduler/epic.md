@@ -6,6 +6,7 @@ updated: 2026-01-17T10:08:22Z
 progress: 100%
 prd: .claude/prds/task-scheduler.md
 github: https://github.com/ebergstedt/ccpm-poc/issues/1
+last_sync: 2026-01-17T10:09:14Z
 ---
 
 # Epic: task-scheduler
