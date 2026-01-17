@@ -41,6 +41,18 @@ A complex, production-grade distributed system for orchestrating computational t
 - `npm run test:integration` - Integration tests
 - `npm run test:e2e` - End-to-end tests
 
+## Git
+
+Before pushing, ensure git is configured to use GitHub CLI credentials:
+```bash
+gh auth setup-git
+```
+
+Then push normally:
+```bash
+git push -u origin master
+```
+
 ## Code Style
 
 Follow existing patterns in the codebase. Use TypeScript strict mode.
