@@ -241,10 +241,19 @@ describe('HeartbeatSubscriber', () => {
   });
 
   describe('health check', () => {
-    it('should mark workers as unhealthy after timeout', async () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should mark workers as unhealthy after timeout', () => {
       const config: HeartbeatSubscriberConfig = {
         unhealthyTimeoutMs: 50,
-        healthCheckIntervalMs: 20,
+        removedTimeoutMs: 500,
+        healthCheckIntervalMs: 10,
       };
       subscriber = new HeartbeatSubscriber(registry, config);
 
@@ -257,28 +266,29 @@ describe('HeartbeatSubscriber', () => {
         registeredWorker.lastHeartbeat = new Date(Date.now() - 100);
       }
 
-      const unhealthyPromise = new Promise<void>((resolve) => {
-        subscriber.on('workerStateChange', (event: WorkerStateEvent) => {
-          if (event.type === 'worker_unhealthy' && event.workerId === 'worker-1') {
-            expect(registry.get('worker-1')?.status).toBe('offline');
-            resolve();
-          }
-        });
+      const stateChanges: WorkerStateEvent[] = [];
+      subscriber.on('workerStateChange', (event: WorkerStateEvent) => {
+        stateChanges.push(event);
       });
 
       subscriber.subscribe(mockStream);
 
-      // Wait for unhealthy event or timeout
-      await Promise.race([
-        unhealthyPromise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 500)),
-      ]);
+      // Advance timers to trigger health check
+      jest.advanceTimersByTime(20);
+
+      // Verify unhealthy event was emitted
+      const unhealthyEvent = stateChanges.find(
+        (e) => e.type === 'worker_unhealthy' && e.workerId === 'worker-1'
+      );
+      expect(unhealthyEvent).toBeDefined();
+      expect(registry.get('worker-1')?.status).toBe('offline');
     });
 
-    it('should remove workers after extended timeout', async () => {
+    it('should remove workers after extended timeout', () => {
       const config: HeartbeatSubscriberConfig = {
+        unhealthyTimeoutMs: 20,
         removedTimeoutMs: 50,
-        healthCheckIntervalMs: 20,
+        healthCheckIntervalMs: 10,
       };
       subscriber = new HeartbeatSubscriber(registry, config);
 
@@ -291,22 +301,22 @@ describe('HeartbeatSubscriber', () => {
         registeredWorker.lastHeartbeat = new Date(Date.now() - 100);
       }
 
-      const removedPromise = new Promise<void>((resolve) => {
-        subscriber.on('workerStateChange', (event: WorkerStateEvent) => {
-          if (event.type === 'worker_removed' && event.workerId === 'worker-1') {
-            expect(registry.get('worker-1')).toBeUndefined();
-            resolve();
-          }
-        });
+      const stateChanges: WorkerStateEvent[] = [];
+      subscriber.on('workerStateChange', (event: WorkerStateEvent) => {
+        stateChanges.push(event);
       });
 
       subscriber.subscribe(mockStream);
 
-      // Wait for removal event or timeout
-      await Promise.race([
-        removedPromise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 500)),
-      ]);
+      // Advance timers to trigger health check
+      jest.advanceTimersByTime(20);
+
+      // Verify removed event was emitted
+      const removedEvent = stateChanges.find(
+        (e) => e.type === 'worker_removed' && e.workerId === 'worker-1'
+      );
+      expect(removedEvent).toBeDefined();
+      expect(registry.get('worker-1')).toBeUndefined();
     });
   });
 

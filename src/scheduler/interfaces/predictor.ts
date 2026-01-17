@@ -34,12 +34,14 @@ export interface Predictor {
    * @param workerId - The worker that executed the task
    * @param success - Whether the task completed successfully
    * @param actualDurationMs - Actual execution duration
+   * @param taskType - Optional task type for learning
    */
   feedback?(
     taskId: string,
     workerId: string,
     success: boolean,
-    actualDurationMs: number
+    actualDurationMs: number,
+    taskType?: string
   ): Promise<void>;
 }
 
